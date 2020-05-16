@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+
+VERSION=0.5
+
+# Don't mess with tens of package manager.
+#   Call UPM for daily package operations.
+
+
+function help () {
+  cat << EOF
+upm $VERSION
+Usage: upm [options] command
+
+upm is a simple wrapper for many package managers used in
+various Linux and UNIX distributions. upm accepts common
+commands, like "search" or "update", and executes them with
+the local package manager.
+
+Implemented commands:
+  install - install a new package
+  info    - display information for a package
+  list    - print all installed packages
+  refresh - update local package list
+  remove  - delete an install package
+  search  - find a package by name
+  update  - install the latest packages
+EOF
+}
+
+
+# Debian/Ubuntu and OpenWrt have a two-step update
+# process, and the package manager doesn't accept
+# both steps in a single script line.
+function debian_upgrade () {
+  apt update
+  apt upgrade
+}
+
+function openwrt_upgrade () {
+  opkg update
+  opkg list-upgradable | awk '{print $1}' | xargs opkg upgrade
+}
+
+
+# determine Linux distribution and package manager
+if [ -e /etc/redhat-release ] ; then
+  DISTRIBUTION="centos"
+  PKG_INSTALL="yum install"
+  PKG_INFO="yum info"
+  PKG_SEARCH="yum search"
+  PKG_UPDATE="yum update"
+  PKG_REMOVE="yum remove"
+  PKG_REFRESH=""
+  PKG_LIST="rpm -qa"
+
+elif [ -e /etc/debian_version ] ; then
+  DISTRIBUTION="debian"
+  PKG_INSTALL="apt install"
+  PKG_INFO="apt info"
+  PKG_SEARCH="apt search"
+  PKG_UPDATE="debian_upgrade"
+  PKG_REMOVE="apt delete"
+  PKG_REFRESH="apt update"
+  PKG_LIST="dpkg -l"
+
+elif [ -e /etc/openwrt_version ] ; then
+  # install bash first: $ opkg update && opkg install bash
+  DISTRIBUTION="openwrt"
+  PKG_INSTALL="opkg install"
+  PKG_INFO="opkg info"
+  PKG_SEARCH="opkg find"
+  PKG_UPDATE="openwrt_upgrade"
+  PKG_REMOVE="opkg remove"
+  PKG_REFRESH="opkg update"
+  PKG_LIST="opkg list-installed"
+
+elif [ -d "/usr/local/opnsense/version" ] ; then
+  # install bash first: $ pkg install bash
+  DISTRIBUTION="opnsense"
+  PKG_INSTALL="pkg install"
+  PKG_INFO="pkg info"
+  PKG_SEARCH="pkg search"
+  PKG_UPDATE="pkg upgrade"
+  PKG_REMOVE="pkg remove"
+  PKG_REFRESH=""
+  PKG_LIST="pkg info"
+
+elif [ -e /etc/suse ] ; then
+  DISTRIBUTION="suse"
+  PKG_INSTALL="zypper install "
+
+else
+  echo "unsupported Linux distribution"
+  exit 1
+fi
+
+
+# parse command-line arguments
+for arg in "$@"; do
+  shift
+  #echo "$arg / $CMD"
+  if [ -z "$CMD" ] ; then
+    case "$arg" in
+      search|find)
+        if [ "$DISTRIBUTION" = "openwrt" ] ; then
+          # OpenWrt expects a regular expression as search string
+          CMD="$PKG_SEARCH *$@*"
+        else
+          CMD="$PKG_SEARCH $@"
+        fi
+        ;;
+      install)
+        CMD="$PKG_INSTALL $@"
+        ;;
+      info)
+        CMD="$PKG_INFO $@"
+        ;;
+      update|upgrade)
+        CMD="$PKG_UPDATE"
+        ;;
+      remove|delete|del)
+        CMD="$PKG_REMOVE $@"
+        ;;
+      refresh)
+        CMD="$PKG_REFRESH"
+        ;;
+      list)
+        CMD="$PKG_LIST"
+        ;;
+      help)
+        help
+        exit 0
+        ;;
+      version)
+        echo $(basename $0) $VERSION
+        exit 0
+        ;;
+    esac
+  fi
+done
+
+
+# execute the distribution-specific command
+if [ -z "$CMD" ] ; then
+  echo "missing command"
+  exit 2
+else
+  echo "\$ '$CMD'"
+  ${CMD}
+  exit $?
+fi
