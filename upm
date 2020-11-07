@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# $Id: upm,v 1.15 2020/11/07 21:03:13 stubbim Exp $
+# $Source: /home/CVSROOT/upm/upm,v $
+# $Destination: /bin/upm $
 
 VERSION=0.5
 
@@ -106,20 +109,20 @@ for arg in "$@"; do
           # OpenWrt expects a regular expression as search string
           CMD="$PKG_SEARCH *$@*"
         else
-          CMD="$PKG_SEARCH $@"
+          CMD="$PKG_SEARCH $*"
         fi
         ;;
       install)
-        CMD="$PKG_INSTALL $@"
+        CMD="$PKG_INSTALL $*"
         ;;
       info)
-        CMD="$PKG_INFO $@"
+        CMD="$PKG_INFO $*"
         ;;
       update|upgrade)
         CMD="$PKG_UPDATE"
         ;;
       remove|delete|del)
-        CMD="$PKG_REMOVE $@"
+        CMD="$PKG_REMOVE $*"
         ;;
       refresh)
         CMD="$PKG_REFRESH"
@@ -132,7 +135,7 @@ for arg in "$@"; do
         exit 0
         ;;
       version)
-        echo $(basename $0) $VERSION
+        echo "$(basename "$0")" $VERSION
         exit 0
         ;;
     esac
