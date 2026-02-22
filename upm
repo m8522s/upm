@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# $Id: upm,v 1.15 2020/11/07 21:03:13 stubbim Exp $
-# $Source: /home/CVSROOT/upm/upm,v $
-# $Destination: /bin/upm $
-
 VERSION=0.5
 
 # Don't mess with tens of package manager.
@@ -67,15 +63,32 @@ elif [ -e /etc/debian_version ] ; then
   PKG_LIST="dpkg -l"
 
 elif [ -e /etc/openwrt_version ] ; then
-  # install bash first: $ opkg update && opkg install bash
-  DISTRIBUTION="openwrt"
-  PKG_INSTALL="opkg install"
-  PKG_INFO="opkg info"
-  PKG_SEARCH="opkg find"
-  PKG_UPDATE="openwrt_upgrade"
-  PKG_REMOVE="opkg remove"
-  PKG_REFRESH="opkg update"
-  PKG_LIST="opkg list-installed"
+  # install "bash" first
+
+  # OpenWrt has changed the package manager from "opkg"
+  # to "apk" in version 25.10
+  source /etc/openwrt_release
+  major_release=$(echo $DISTRIB_RELEASE | cut -c 1-2)
+
+  if [ "$major_release" -lt "25" ] ; then
+    DISTRIBUTION="openwrt"
+    PKG_INSTALL="opkg install"
+    PKG_INFO="opkg info"
+    PKG_SEARCH="opkg find"
+    PKG_UPDATE="openwrt_upgrade"
+    PKG_REMOVE="opkg remove"
+    PKG_REFRESH="opkg update"
+    PKG_LIST="opkg list-installed"
+  else
+    DISTRIBUTION="openwrt"
+    PKG_INSTALL="apk add"
+    PKG_INFO="apk query"
+    PKG_SEARCH="apk search"
+    PKG_UPDATE="apk upgrade"
+    PKG_REMOVE="apk del"
+    PKG_REFRESH="apk update"
+    PKG_LIST="apk list"
+  fi
 
 elif [ -d "/usr/local/opnsense/version" ] ; then
   # install bash first: $ pkg install bash
